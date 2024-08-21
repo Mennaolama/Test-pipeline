@@ -28,7 +28,7 @@ replace_with_ssm_parameters() {
         if [ -n "$parameter_value" ]; then
             # Replace the value if the variable exists in the file and starts with a '$'
             sed -i'' -e "s|\\\$$key|$parameter_value|g" "$input_file"
-            echo "Updated value for $key in $input_file"  # Debug output
+            # echo "Updated value for $key in $input_file"  # Debug output
         else
             echo "No corresponding value found in Parameter Store for $key; skipping update."
         fi
