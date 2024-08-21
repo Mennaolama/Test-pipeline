@@ -23,7 +23,7 @@ replace_with_ssm_parameters() {
         # Extract the value for the current key
         parameter_value=$(echo "$parameters" | jq -r --arg key "$key" '.[] | select(.Name == "'$parameter_prefix'" + $key) | .Value // empty')
 
-        echo "Extracted value for $key: $parameter_value"  # Debug output
+        # echo "Extracted value for $key: $parameter_value"  # Debug output
 
         if [ -n "$parameter_value" ]; then
             # Replace the value if the variable exists in the file and starts with a '$'
