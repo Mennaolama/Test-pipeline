@@ -1,0 +1,76 @@
+service: vultara-server
+provider:
+  deploymentPrefix: serverless-vultara-${opt:stage}
+  name: aws
+  runtime: nodejs18.x
+  stage: $serverlessStage
+  region: $region
+  deploymentBucket: ${self:custom.regionBucket.${self:provider.region}}
+custom:
+  CUSTOMER_NAME: $CUSTOMER_NAME
+  certificateArn: "$certificateArn" # Certificate ARN for *.api.vultara.com
+
+  customDomain:
+    domainName: ${self:provider.environment.CUSTOMER_NAME}.api.vultara.com
+    basePath: ''
+    stage: ${self:provider.stage}
+    createRoute53Record: true
+    createRoute53IPv6Record: false
+    endpointType: regional
+    certificateArn: ${self:custom.certificateArn}
+    securityPolicy: tls_1_2
+
+  regionBucket:
+    us-east-1: vultara-apps-serverless-deployment-bucket-virginia
+    us-west-2: vultara-apps-serverless-deployment-bucket-oregon
+
+  SECRETS: ${file(./secret.js):getSecrets}
+  originUrl: '$frontEndUrl'
+functions:
+  app:
+    handler: server.handler
+    vpc:
+      securityGroupIds:
+        ${file(./config.js):lambdaExecSecurityGroups}
+      subnetIds:
+        - ${file(./config.js):serverlessDeploySubnet1}
+        - ${file(./config.js):serverlessDeploySubnet2}
+    environment:
+      ATLASDB: ${self:custom.SECRETS.ATLASDB}
+      ATLASDB_CUSTOMERLICENSE: ${self:custom.SECRETS.ATLASDB_CUSTOMERLICENSE}
+      ATLASDB_COMPONENTREAD: ${self:custom.SECRETS.ATLASDB_COMPONENTREAD}
+      ATLASDB_DATAANALYTICS: ${self:custom.SECRETS.ATLASDB_DATAANALYTICS}
+      ATLASDB_ALGOREAD: ${self:custom.SECRETS.ATLASDB_ALGOREAD}
+      ATLASDB_USERACCESS: ${self:custom.SECRETS.ATLASDB_USERACCESS}
+      ATLASDB_HELPREAD: ${self:custom.SECRETS.ATLASDB_HELPREAD}
+      ATLASDB_CUSTOMERDIAGNOSTIC: ${self:custom.SECRETS.ATLASDB_CUSTOMERDIAGNOSTIC}
+      JWT_SECRET_KEY: ${self:custom.SECRETS.JWT_SECRET_KEY}
+      ACCESS_TOKEN: ${self:custom.SECRETS.ACCESS_TOKEN}
+      cveApiKey: ${self:custom.SECRETS.cveApiKey}
+    events:
+      - http:
+          path: /
+          method: ANY
+          cors:
+            origin: ${self:custom.originUrl,'https://awsportal.vultara.com'}
+            allowCredentials: true
+      - http:
+          path: /{proxy+}
+          method: ANY
+          cors:
+            origin: ${self:custom.originUrl,'https://awsportal.vultara.com'}
+            allowCredentials: true
+    timeout: $timeout # in seconds, default is 6
+    memorySize: $memorySize
+
+resources:
+  Resources:
+    ApiGatewayRestApi:
+      Type: AWS::ApiGateway::RestApi
+      Properties:
+        Name: ${self:provider.environment.CUSTOMER_NAME}-API
+
+plugins:
+  - serverless-offline
+  - serverless-domain-manager
+  - serverless-deployment-bucket
