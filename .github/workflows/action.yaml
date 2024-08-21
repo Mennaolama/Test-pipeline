@@ -20,23 +20,23 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: "us-east-1"
+          aws-region: "${{ secrets.AWS_DEFAULT_REGION }}"
 
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y jq
 
-      - name: Call get_ssm_parameter
-        id: run-ssm-extract
-        run: |
-          source ./ssm_extract.sh
-          variable=$(get_ssm_parameter "/fakecustomer/" "awsSecretManagerName")
-          echo "variable=$variable" >> $GITHUB_ENV
+      # - name: Call get_ssm_parameter
+      #   id: run-ssm-extract
+      #   run: |
+      #     source ./ssm_extract.sh
+      #     variable=$(get_ssm_parameter "/fakecustomer/" "awsSecretManagerName")
+      #     echo "variable=$variable" >> $GITHUB_ENV
 
-      - name: Use extracted value in a test
-        run: |
-          echo "The extracted logStreamName variable is: ${{ env.variable }}"
+      # - name: Use extracted value in a test
+      #   run: |
+      #     echo "The extracted logStreamName variable is: ${{ env.variable }}"
 
       - name: Call replace_with_ssm_parameters function
         run: |
