@@ -17,7 +17,7 @@ let tenantId = "$tenantId";
 let lambdaExecSecurityGroups = "$lambdaExecSecurityGroups";
 let subnet1 = "$subnet1";
 let subnet2 = "$subnet2";
-let jiraEmail = "$jiraEmail";
+let jiraEmail = $jiraEmail;
 const exportJira = "$exportJira" === "ON" ? true : false;
 const hideNonSsoLogin = "$hideNonSsoLogin" === "ON" ? true : false;
 let logGroupName = "$logGroupName";
