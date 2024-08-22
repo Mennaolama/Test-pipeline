@@ -11,6 +11,13 @@ jobs:
   run-and-test-scripts:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        environment_path:
+           - "/fakecustomer/"
+           - "/trial/"
+           - "/prod/"
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -20,7 +27,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: "${{ secrets.AWS_DEFAULT_REGION }}"
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
       - name: Install dependencies
         run: |
@@ -30,17 +37,17 @@ jobs:
       - name: Call replace_with_ssm_parameters function
         run: |
           source ./ssm_change_value.sh
-          replace_with_ssm_parameters "/fakecustomer/" "./config.js"
+          replace_with_ssm_parameters "${{ matrix.environment_path }}" "./config.js"
           cat config.js
 
       - name: Call replace_with_ssm_parameters function
         run: |
           source ./ssm_change_value.sh
-          replace_with_ssm_parameters "/fakecustomer/" "./enviroment.awsdeploy.ts"
+          replace_with_ssm_parameters "${{ matrix.environment_path }}" "./enviroment.awsdeploy.ts"
           cat enviroment.awsdeploy.ts
 
       - name: Call replace_with_ssm_parameters function
         run: |
           source ./ssm_change_value.sh
-          replace_with_ssm_parameters "/fakecustomer/" "./serverless.yml"
+          replace_with_ssm_parameters "${{ matrix.environment_path }}" "./serverless.yml"
           cat serverless.yml
