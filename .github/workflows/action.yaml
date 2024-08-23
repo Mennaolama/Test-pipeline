@@ -14,9 +14,9 @@ jobs:
     strategy:
       matrix:
         environment_path:
-           - "/fakecustomer/"
+           - "/internalVultara/"
+           - "/prodConsulting/"
            - "/trial/"
-           - "/prod/"
 
     steps:
       - name: Checkout repository
