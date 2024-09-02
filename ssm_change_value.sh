@@ -17,9 +17,6 @@ replace_with_ssm_parameters() {
     # Combine app and deployment into the full prefix path
     local full_prefix="${app_prefix}${deployment_prefix}"
 
-    # Debugging: print the full_prefix to verify correctness
-    echo "Fetching parameters from SSM for prefix: $full_prefix"
-
     # Retrieve all parameters under the specified prefix
     parameters=$(aws ssm get-parameters-by-path --path "$full_prefix" --with-decryption --query "Parameters" --output json 2>/dev/null)
 
@@ -38,7 +35,6 @@ replace_with_ssm_parameters() {
         if [ -n "$parameter_value" ]; then
             # Replace the value in the input file where the variable starts with '$'
             sed -i'' -e "s|\\\$$key|$parameter_value|g" "$input_file"
-            echo "Replaced $key with $parameter_value in $input_file"
         else
             echo "No corresponding value found in Parameter Store for $key; skipping update."
         fi
