@@ -44,4 +44,4 @@ replace_with_ssm_parameters() {
 }
 
 # Call the function with the provided app, deployment prefix, and input file
-#replace_with_ssm_parameters "$1" "$2" "$3"
+replace_with_ssm_parameters "$1" "$2" "$3"
