@@ -13,10 +13,14 @@ jobs:
 
     strategy:
       matrix:
-        environment_path:
-           - "/internalVultara/"
-           - "/prodConsulting/"
-           - "/trial/"
+        app: 
+          - "vultara"
+          - "soc"
+          - "consulting"
+        deployment_type:
+          - "internalVultara"
+          - "prodConsulting"
+          - "trial"
 
     steps:
       - name: Checkout repository
@@ -34,20 +38,20 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y jq
 
-      - name: Call replace_with_ssm_parameters function
+      - name: Replace config.js values
         run: |
           source ./ssm_change_value.sh
-          replace_with_ssm_parameters "${{ matrix.environment_path }}" "./config.js"
+          replace_with_ssm_parameters "/${{ matrix.app }}/" "/${{ matrix.deployment_type }}/" "./config.js"
           cat config.js
 
-      - name: Call replace_with_ssm_parameters function
+      - name: Replace environment.awsdeploy.ts file
         run: |
           source ./ssm_change_value.sh
-          replace_with_ssm_parameters "${{ matrix.environment_path }}" "./enviroment.awsdeploy.ts"
+          replace_with_ssm_parameters "/${{ matrix.app }}/" "/${{ matrix.deployment_type }}/" "./enviroment.awsdeploy.ts"
           cat enviroment.awsdeploy.ts
 
-      - name: Call replace_with_ssm_parameters function
+      - name: Replace serverless.yml file
         run: |
           source ./ssm_change_value.sh
-          replace_with_ssm_parameters "${{ matrix.environment_path }}" "./serverless.yml"
+          replace_with_ssm_parameters "/${{ matrix.app }}/" "/${{ matrix.deployment_type }}/" "./serverless.yml"
           cat serverless.yml

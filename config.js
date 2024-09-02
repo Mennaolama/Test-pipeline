@@ -4,7 +4,7 @@ let AWS_DEPLOY = "$awsDeploy";
 let licenseId = AWS_DEPLOY;
 let deploymentType = "$deploymentType"
 let frontEndUrl = "$frontEndUrl"
-const frontEndUrls_Prod_All = "$frontEndUrls_Prod_All".split(",");
+const frontEndUrls_Prod_All = "$Prod_All_frontEndUrls".split(",");
 let allFrontEndUrls = ["http://localhost:4200", "https://awsportal.vultara.com", ...frontEndUrls_Prod_All];
 let s3ReportsBucketName = "$s3ReportsBucketName";
 let s3ImportBucketName = "$s3ImportBucketName";
@@ -18,8 +18,8 @@ let lambdaExecSecurityGroups = "$lambdaExecSecurityGroups";
 let subnet1 = "$subnet1";
 let subnet2 = "$subnet2";
 let jiraEmail = $jiraEmail;
-const exportJira = "$exportJira" === "ON" ? true : false;
-const hideNonSsoLogin = "$hideNonSsoLogin" === "ON" ? true : false;
+const exportJira = $exportJira;
+const hideNonSsoLogin = $hideNonSsoLogin;
 let logGroupName = $logGroupName;
 let logStreamName = $logStreamName;
 const jiraApiKey = "VmSRoslO14Ov1SKVClXKED49";
