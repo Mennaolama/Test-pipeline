@@ -15,11 +15,11 @@ jobs:
       matrix:
         app: 
           - "vultara"
-          - "soc"
-          - "consulting"
+          # - "soc"
+          # - "consulting"
         deployment_type:
-          - "internalVultara"
-          - "prodConsulting"
+          # - "internalVultara"
+          # - "prodConsulting"
           - "trial"
 
     steps:
