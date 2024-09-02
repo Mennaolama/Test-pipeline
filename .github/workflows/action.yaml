@@ -14,13 +14,13 @@ jobs:
     strategy:
       matrix:
         app: 
-          - "/vultara/"
+          - "vultara"
           # - "soc"
           # - "consulting"
         deployment_type:
           # - "internalVultara"
           # - "prodConsulting"
-          - "/trial/"
+          - "trial"
 
     steps:
       - name: Checkout repository
@@ -46,17 +46,17 @@ jobs:
       - name: Replace config.js values
         run: |
           source ./ssm_change_value.sh
-          replace_with_ssm_parameters "${{ matrix.app }}" "${{ matrix.deployment_type }}" "./config.js"
+          replace_with_ssm_parameters "/${{ matrix.app }}/" "${{ matrix.deployment_type }}/" "./config.js"
           cat config.js
 
       - name: Replace environment.awsdeploy.ts file
         run: |
           source ./ssm_change_value.sh
-          replace_with_ssm_parameters "${{ matrix.app }}" "${{ matrix.deployment_type }}" "./enviroment.awsdeploy.ts"
+          replace_with_ssm_parameters "/${{ matrix.app }}/" "${{ matrix.deployment_type }}/" "./enviroment.awsdeploy.ts"
           cat enviroment.awsdeploy.ts
 
       - name: Replace serverless.yml file
         run: |
           source ./ssm_change_value.sh
-          replace_with_ssm_parameters "/${{ matrix.app }}/" "/${{ matrix.deployment_type }}/" "./serverless.yml"
+          replace_with_ssm_parameters "/${{ matrix.app }}/" "${{ matrix.deployment_type }}/" "./serverless.yml"
           cat serverless.yml
