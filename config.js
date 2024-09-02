@@ -1,6 +1,6 @@
 require('dotenv').config({ path: __dirname + '/./.env' });
 
-let AWS_DEPLOY = "$awsDeploy";
+let AWS_DEPLOY = "trial";
 let licenseId = AWS_DEPLOY;
 let deploymentType = "$deploymentType"
 let frontEndUrl = "$frontEndUrl"
@@ -10,7 +10,7 @@ let s3ReportsBucketName = "$s3ReportsBucketName";
 let s3ImportBucketName = "$s3ImportBucketName";
 let feasabilitySageMakerEndPointName = "feasibility-en";
 let awsSecretManagerName = "$awsSecretManagerName";
-let APPServerRootHTTPURL = "$APPServerRootHTTPURL";
+let APPServerRootHTTPURL = "https://internal.api.vultara.com/api/";
 let ReportServerHTTPURL = "$ReportServerHTTPURL";
 let ssoClientId = "$ssoClientId";
 let tenantId = "$tenantId";
