@@ -3,7 +3,7 @@
 # Date_created: 19/08/2024
 # Description: This Bash function replaces variables in the input file with values saved in AWS Systems Manager.
 # It takes /app/ and /deployment/ as separate inputs, along with the input file.
-# Usage: ./script.sh /app/ /deployment/ /inputfile/
+# Usage: source ./replace_with_ssm_parameters.sh /app/ /deployment/ /inputfile/
 
 replace_with_ssm_parameters() {
     local app_prefix=$1
@@ -25,7 +25,7 @@ replace_with_ssm_parameters() {
 
     if [ $? -ne 0 ] || [ -z "$parameters" ]; then
         echo "Failed to retrieve parameters. Check AWS CLI configuration, permissions, and ensure the path exists."
-        exit 1
+        return 1
     fi
 
     # Loop through each parameter and replace its corresponding variable in the file
@@ -44,12 +44,10 @@ replace_with_ssm_parameters() {
         fi
     done
 
-    # Check if the update operation was successful
-    if [ $? -ne 0 ]; then
-        echo "Error: Failed to update $input_file."
-        exit 1
-    fi
+    return 0
 }
 
-# Call the function with the provided app, deployment prefix, and input file
-replace_with_ssm_parameters "$1" "$2" "$3"
+# Call the function with the provided app, deployment prefix, and input file if the script is run directly
+# if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+#     replace_with_ssm_parameters "$1" "$2" "$3"
+# fi
