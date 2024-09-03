@@ -1,0 +1,188 @@
+name: Deploy App to Internal AWS Environment
+
+on:
+  workflow_dispatch:
+    branches:
+      - pre-master
+  push:
+    branches:
+      - automate-customer-deployment
+
+jobs:
+  internalVultara-deploy:
+    runs-on: self-hosted
+    permissions:
+      deployments: write
+      contents: read
+      statuses: write
+
+    env:
+      LOGIN_IMAGE_NAME: vultaraLogin.jpg
+
+    strategy:
+      matrix:
+        app: 
+          - "vultara"
+        deployment_type:
+          # - "trial"
+          - "internalVultara"
+
+    steps:
+      - name: Get git output names
+        id: git
+        shell: bash
+        run: |
+          if [[ "${{ github.ref }}" != "refs/tags/"* ]]; then
+            if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+              echo "::set-output name=current_branch::$HEAD_REF"
+            else
+              echo "::set-output name=current_branch::$REF_BRANCH"
+            fi
+          else
+            REF=$(printf "%q" "${{ github.ref }}")
+            REF_BRANCH=${REF/refs\/tags\/${{ inputs.strip_tag_prefix }}/}
+            echo "::set-output name=current_branch::$(eval printf "%s" "$REF_BRANCH")"
+          fi
+
+      - name: Create GitHub deployment
+        uses: chrnorm/deployment-action@v2
+        id: deployment
+        with:
+          token: '${{ github.token }}'
+          environment: production
+          ref: ${{ steps.git.outputs.current_branch }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Remove non-related login images
+        run: |
+          cd ./src/assets/images/login-images
+          find . -type f ! -name "${LOGIN_IMAGE_NAME}" -exec rm {} +
+
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm install
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: update config values
+        run: |
+          chmod 777 ./ssm_change_value.sh
+          source ./ssm_change_value.sh
+          replace_with_ssm_parameters "/${{ matrix.app }}/" "${{ matrix.deployment_type }}/" "./config.js"
+          cat config.js
+
+      - name: update all config, environment, and serverless values
+        run: |
+          chmod 777 ./ssm_change_value.sh
+          source ./ssm_change_value.sh
+          replace_with_ssm_parameters "/${{ matrix.app }}/" "${{ matrix.deployment_type }}/" "./server/config.js"
+          cat ./server/config.js
+          replace_with_ssm_parameters "/${{ matrix.app }}/" "${{ matrix.deployment_type }}/" "./src/environments/environment.awsdeploy.ts"
+          cat ./src/environments/environment.awsdeploy.ts
+          replace_with_ssm_parameters "/${{ matrix.app }}/" "${{ matrix.deployment_type }}/" "./server/serverless.yml"
+          cat ./server/serverless.yml
+
+      - name: Build app
+        run: npm run build-awsdeploy
+
+      - name: Retrieve S3 bucket value from SSM
+        id: get_s3_bucket
+        run: |
+          chmod 777 ./ssm_extract.sh
+          source ./ssm_extract.sh
+          S3_BUCKET_NAME=$(get_ssm_parameter "/${{ matrix.deployment_type }}/" "vultaraS3BucketName")
+          echo "S3_BUCKET_NAME=$S3_BUCKET_NAME" >> $GITHUB_ENV
+
+      - name: Remove S3 files
+        if: success()
+        run: aws s3 rm s3://$S3_BUCKET_NAME --recursive
+
+      - name: Retrieve cloudfront invalidation value from SSM
+        id: get_cloudfront
+        run: |
+          chmod 777 ./ssm_extract.sh
+          source ./ssm_extract.sh
+          CLOUDFRONT_VALUE=$(get_ssm_parameter "/${{ matrix.deployment_type }}/" "vultaraCloudfrontValue")
+          echo "CLOUDFRONT_VALUE=$CLOUDFRONT_VALUE" >> $GITHUB_ENV
+
+      - name: CloudFront Invalidation
+        if: success()
+        run: |
+          aws configure set preview.cloudfront true
+          aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_VALUE --paths "/index.html"
+
+      - name: Deploy to S3
+        if: success()
+        run: aws s3 sync ./dist/vultara s3://$S3_BUCKET_NAME --delete
+
+      - name: Update .env file
+        run: |
+          cd ./server
+          touch .env
+          echo "AWS_DEPLOY=${{ matrix.deployment_type }}" >> .env
+
+      - name: Install serverless framework & dependencies
+        run: |
+          cd ./server
+          npm i
+          npm i -g serverless@3.36.0
+
+      - name: Deploy serverless
+        run: |
+          cd ./server
+          echo "Deploying to ${AWS_DEPLOY} environment"
+          sls plugin install -n serverless-offline@13.6.0
+          sls plugin install -n serverless-domain-manager
+          sls plugin install -n serverless-deployment-bucket
+          sls create_domain --stage ${{ matrix.deployment_type }}
+          sls deploy --stage ${{ matrix.deployment_type }}
+
+      - name: Update deployment status (success)
+        if: success()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: '${{ github.token }}'
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+          state: 'success'
+          ref: ${{ steps.git.outputs.current_branch }}
+
+      - name: Update deployment status (failure)
+        if: failure()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: '${{ github.token }}'
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+          state: 'failure'
+          ref: ${{ steps.git.outputs.current_branch }}
+
+      - name: Send a notification about the failure.
+        if: failure()
+        run: |
+        aws sns publish --topic-arn "arn:aws:sns:us-east-1:837491041518:DevOps_notifications" \
+        --message "The workflow ${{ github.workflow }} of ${{ github.repository }} has ${{ job.status }}" \
+        --subject "${{ github.workflow }} Workflow Status is ${{ job.status }}"
+
+
